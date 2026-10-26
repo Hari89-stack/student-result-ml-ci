@@ -1,4 +1,4 @@
-
+```yaml
 name: Student Result ML CI
 
 on:
@@ -18,25 +18,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # Step 2: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
+      # Step 3: Upgrade pip
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
+      # Step 4: Install ML dependencies
+      - name: Install ML dependencies
+        run: pip install -r requirements.txt
 
+      # Step 5: Train the ML model
       - name: Train student result model
         run: python train_model.py
 
+      # Step 6: Check ML quality gate
       - name: Check ML quality gate
         run: python quality_gate.py
 
+      # Step 7: Run automated ML tests
       - name: Run automated ML tests
         run: python -m unittest discover -v
-
-
+```
