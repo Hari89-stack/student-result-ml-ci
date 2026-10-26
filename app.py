@@ -8,7 +8,7 @@ app = Flask(__name__)
 MODEL_PATH = "student_result_model.pkl"
 model = None
 
-# Load the trained model
+# Load the trained ML model
 if os.path.exists(MODEL_PATH):
     model = joblib.load(MODEL_PATH)
 
@@ -72,13 +72,22 @@ def predict():
             for feature in required_features
         ]]
 
+        # Generate prediction
         prediction = model.predict(values)[0]
 
         if hasattr(prediction, "item"):
             prediction = prediction.item()
 
+        # Convert binary predictions into result labels
+        if prediction == 1:
+            result = "PASS"
+        elif prediction == 0:
+            result = "FAIL"
+        else:
+            result = str(prediction)
+
         return jsonify({
-            "prediction": str(prediction)
+            "prediction": result
         }), 200
 
     except (ValueError, TypeError):
