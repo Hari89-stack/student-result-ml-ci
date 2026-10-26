@@ -29,16 +29,7 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      - name: Install ML dependencies
-        run: pip install -r requirements.txt
 
-      - name: Train student result model
-        run: python train_model.py
-
-      - name: Run automated ML tests
-        run: python -m unittest discover -v
-
-        
       - name: Train student result model
         run: python train_model.py
 
@@ -47,4 +38,5 @@ jobs:
 
       - name: Run automated ML tests
         run: python -m unittest discover -v
+
 
