@@ -1,71 +1,76 @@
 
-from pathlib import Path
-
-import joblib
-import pandas as pd
-from flask import Flask, jsonify, request
+from flask import Flask, request, jsonify
+import pickle
+import os
 
 app = Flask(__name__)
 
-MODEL_PATH = Path("student_result_model.pkl")
+MODEL_PATH = "student_result_model.pkl"
 
-FEATURES = [
-    "attendance",
-    "internal_marks",
-    "assignment_marks",
-    "previous_score",
-]
+model = None
 
-
-def load_model():
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(
-            "Model not found. Run train_model.py first."
-        )
-    return joblib.load(MODEL_PATH)
+if os.path.exists(MODEL_PATH):
+    with open(MODEL_PATH, "rb") as file:
+        model = pickle.load(file)
 
 
-@app.get("/")
-def health_check():
+@app.route("/", methods=["GET"])
+def home():
     return jsonify({
         "status": "ok",
         "service": "student-result-prediction"
-    })
+    }), 200
 
 
-@app.post("/predict")
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "healthy"
+    }), 200
+
+
+@app.route("/predict", methods=["POST"])
 def predict():
+    if model is None:
+        return jsonify({"error": "Model is not loaded"}), 500
+
     data = request.get_json(silent=True)
 
-    if not data:
-        return jsonify({
-            "error": "JSON request body is required"
-        }), 400
+    if not isinstance(data, dict):
+        return jsonify({"error": "Please provide a valid JSON object"}), 400
 
-    missing_fields = [
-        feature for feature in FEATURES
-        if feature not in data
+    required_features = [
+        "attendance",
+        "internal_marks",
+        "assignment_marks",
+        "previous_score"
     ]
 
-    if missing_fields:
+    missing = [feature for feature in required_features if feature not in data]
+
+    if missing:
         return jsonify({
             "error": "Missing required fields",
-            "missing_fields": missing_fields
+            "missing_fields": missing
         }), 400
 
-    sample = pd.DataFrame([{
-        feature: data[feature]
-        for feature in FEATURES
-    }])
+    try:
+        values = [[float(data[feature]) for feature in required_features]]
+        prediction = model.predict(values)[0]
 
-    model = load_model()
-    prediction_code = int(model.predict(sample)[0])
-    prediction = "PASS" if prediction_code == 1 else "FAIL"
+        if hasattr(prediction, "item"):
+            prediction = prediction.item()
 
-    return jsonify({
-        "prediction": prediction,
-        "prediction_code": prediction_code
-    })
+        return jsonify({
+            "prediction": str(prediction)
+        }), 200
+
+    except (ValueError, TypeError) as error:
+        return jsonify({"error": str(error)}), 400
+
+    except Exception:
+        app.logger.exception("Prediction failed")
+        return jsonify({"error": "Prediction failed"}), 500
 
 
 if __name__ == "__main__":
